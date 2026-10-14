@@ -1,21 +1,17 @@
-const {MongoMemoryServer} = require('mongodb-memory-server');
-const {MongoClient} = require('mongodb');
+const { MongoClient } = require('mongodb');
 
-let database = null;
+const uri = process.env.MONGODB_URI;
+let clientPromise = global._mongoClientPromise;
 
-async function startDatabase() {
-    mongo = await MongoMemoryServer.create(); 
-    const mongoDBURL = mongo.getUri();
-    connection = await MongoClient.connect(mongoDBURL); 
-    database = connection.db();
+if (!clientPromise) {
+    const client = new MongoClient(uri);
+    clientPromise = client.connect();
+    global._mongoClientPromise = clientPromise;   // survives warm invocations
 }
 
 async function getDatabase() {
-    if(!database) startDatabase();
-    return database;
+    const client = await clientPromise;
+    return client.db();   // uses the db name from the URI, or pass one: client.db('mydb')
 }
 
-module.exports = {
-    getDatabase,
-    startDatabase
-};
+module.exports = { getDatabase };
